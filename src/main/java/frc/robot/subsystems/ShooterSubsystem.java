@@ -17,7 +17,7 @@ import edu.wpi.first.wpilibj2.command.SubsystemBase;
 
 import static frc.robot.Constants.OperatorConstants.*;
 
-public class TestMotorSubsystem extends SubsystemBase {
+public class ShooterSubsystem extends SubsystemBase {
 
     private final CANSparkMax motor;
     private final SparkPIDController pidController;
@@ -31,7 +31,7 @@ public class TestMotorSubsystem extends SubsystemBase {
     private double smoothCurrent = 0;
     private double filterConstant = 0.8;
   
-    public TestMotorSubsystem() {
+    public ShooterSubsystem() {
       motor = new CANSparkMax(TEST_MOTOR_ID, MotorType.kBrushless); // CHANGE DEVICE ID
           motor.restoreFactoryDefaults();
           motor.setInverted(false);
@@ -54,9 +54,10 @@ public class TestMotorSubsystem extends SubsystemBase {
     }
   
     public void teleopInit() {
+        //hi
         pidController.setReference(0, ControlType.kDutyCycle);
     }
-
+ 
     public void setMotorPosition(double position) {
         pidController.setReference(position, ControlType.kPosition);
     }
