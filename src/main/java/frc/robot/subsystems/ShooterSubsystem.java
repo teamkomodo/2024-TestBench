@@ -54,9 +54,10 @@ public class ShooterSubsystem extends SubsystemBase {
     }
   
     public void teleopInit() {
+        //hi
         pidController.setReference(0, ControlType.kDutyCycle);
     }
-
+ 
     public void setMotorPosition(double position) {
         pidController.setReference(position, ControlType.kPosition);
     }
