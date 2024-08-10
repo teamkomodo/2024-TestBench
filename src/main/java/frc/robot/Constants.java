@@ -15,7 +15,14 @@ package frc.robot;
 public final class Constants {
   public static class OperatorConstants {
     public static final int kDriverControllerPort = 0;
+    
     public static final double XBOX_JOYSTICK_THRESHOLD = 0.05D;
+
     public static final int TEST_MOTOR_ID = 31;
+
+    public static final int SHOOTER_MOTOR_1_ID = 0;
+    public static final int SHOOTER_MOTOR_2_ID = 0;
+    public static final int INDEXER_MOTOR_1_ID = 0;
+    public static final int INDEXER_MOTOR_2_ID = 0;
   }
 }

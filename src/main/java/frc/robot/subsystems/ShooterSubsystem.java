@@ -10,75 +10,181 @@ import com.revrobotics.CANSparkMax;
 import com.revrobotics.RelativeEncoder;
 import com.revrobotics.CANSparkLowLevel.MotorType;
 
-import edu.wpi.first.wpilibj.DigitalInput;
-import edu.wpi.first.wpilibj.shuffleboard.Shuffleboard;
-import edu.wpi.first.wpilibj.shuffleboard.ShuffleboardTab;
+import edu.wpi.first.networktables.DoublePublisher;
+import edu.wpi.first.networktables.NetworkTable;
+import edu.wpi.first.networktables.NetworkTableInstance;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
+// import edu.wpi.first.wpilibj.DigitalInput;
+// import edu.wpi.first.wpilibj.shuffleboard.Shuffleboard;
+// import edu.wpi.first.wpilibj.shuffleboard.ShuffleboardTab;
 
 import static frc.robot.Constants.OperatorConstants.*;
 
 public class ShooterSubsystem extends SubsystemBase {
+    private final NetworkTable shooterTable = NetworkTableInstance.getDefault().getTable("shooter");
+    private final DoublePublisher shooterMotorSpeedPublisher = shooterTable.getDoubleTopic("shooterMotorSpeed").publish();
+    private final DoublePublisher shooterMotorPositionPublisher = shooterTable.getDoubleTopic("shooterMotorPosition").publish();
 
-    private final CANSparkMax motor;
-    private final SparkPIDController pidController;
-    private final RelativeEncoder encoder;
-  
-    private double p = 1.0;
-    private double i = 0;
-    private double d = 0;
-    private double maxIAccum = 0;
+    private final NetworkTable indexerTable = NetworkTableInstance.getDefault().getTable("indexer");
+    private final DoublePublisher indexerMotorSpeedPublisher = indexerTable.getDoubleTopic("indexerMotorSpeed").publish();
+    private final DoublePublisher indexerMotorPositionPublisher = indexerTable.getDoubleTopic("indexerMotorPosition").publish();
+
+    private final CANSparkMax shooterMotor;
+    private final SparkPIDController shooterPidController;
+    private final RelativeEncoder shooterEncoder;
+    private final CANSparkMax shooterMotor2;
+
+    private double shooterP = 1;
+    private double shooterI = 0;
+    private double shooterD = 0;
+    private double shooterMaxIAccum = 0;
+    private double shooterIZone = 1;
+    private double shooterFF = 0.00022;
+    private double shooterMinOutput = -1;
+    private double shooterMaxOutput = 1;
+    private double shooterMotorSpeed = 0;
+    private double shooterMotorPosition = 0;
+
+    private final CANSparkMax indexerMotor;
+    private final SparkPIDController indexerPidController;
+    private final RelativeEncoder indexerEncoder;
+    private final CANSparkMax indexerMotor2;
+
+    private double indexerP = 0.1;
+    private double indexerI = 0;
+    private double indexerD = 0;
+    private double indexerMaxIAccum = 0;
+    private double indexerMotorSpeed = 0;
+    private double indexerMotorPosition = 0;
   
     private double smoothCurrent = 0;
     private double filterConstant = 0.8;
+    
   
     public ShooterSubsystem() {
-      motor = new CANSparkMax(TEST_MOTOR_ID, MotorType.kBrushless); // CHANGE DEVICE ID
-          motor.restoreFactoryDefaults();
-          motor.setInverted(false);
-          motor.setSmartCurrentLimit(30);
-          
-          encoder = motor.getEncoder();
-          encoder.setPosition(0);
-  
-          pidController = motor.getPIDController();
-          pidController.setP(p);
-          pidController.setI(i);
-          pidController.setD(d);
-          pidController.setIMaxAccum(maxIAccum, 0);
-          pidController.setReference(0, ControlType.kDutyCycle);
+        shooterMotor = new CANSparkMax(SHOOTER_MOTOR_1_ID, MotorType.kBrushless); // CHANGE DEVICE ID
+        shooterMotor.setInverted(false);
+        shooterMotor.setSmartCurrentLimit(50);
+
+        shooterEncoder = shooterMotor.getEncoder();
+        shooterEncoder.setPosition(0);
+
+        shooterMotor2 = new CANSparkMax(SHOOTER_MOTOR_2_ID, MotorType.kBrushless); // CHANGE DEVICE ID
+        shooterMotor2.setSmartCurrentLimit(50);
+        shooterMotor2.setInverted(true);
+        shooterMotor2.follow(shooterMotor);
+        
+        shooterPidController = shooterMotor.getPIDController();
+        setPidController(shooterPidController, shooterP, shooterI, shooterD, shooterMaxIAccum, shooterIZone, shooterFF, shooterMinOutput, shooterMaxOutput);
+        setShooterMotor(0, ControlType.kDutyCycle);
+
+        indexerMotor = new CANSparkMax(INDEXER_MOTOR_1_ID, MotorType.kBrushless); // CHANGE DEVICE ID
+        indexerMotor.setInverted(false);
+        indexerMotor.setSmartCurrentLimit(30);
+
+        indexerEncoder = indexerMotor.getEncoder();
+        indexerEncoder.setPosition(0);
+
+        indexerMotor2 = new CANSparkMax(INDEXER_MOTOR_2_ID, MotorType.kBrushless); // CHANGE DEVICE ID
+        indexerMotor2.setInverted(true);
+        indexerMotor2.follow(indexerMotor);
+
+        indexerPidController = indexerMotor.getPIDController();
+        setPidController(indexerPidController, indexerP, indexerI, indexerD, indexerMaxIAccum);
+        setIndexerMotor(0, ControlType.kDutyCycle);
       }
   
     @Override
     public void periodic() {
-        smoothCurrent = smoothCurrent * filterConstant + motor.getOutputCurrent() * (1-filterConstant);
+        smoothCurrent = smoothCurrent * filterConstant + shooterMotor.getOutputCurrent() * (1-filterConstant);
+        updateTable();
     }
   
     public void teleopInit() {
-        //hi
-        pidController.setReference(0, ControlType.kDutyCycle);
-    }
- 
-    public void setMotorPosition(double position) {
-        pidController.setReference(position, ControlType.kPosition);
-    }
-  
-    public void setMotorDutyCycle(double dutyCycle) {
-        pidController.setReference(dutyCycle, ControlType.kDutyCycle);
-    }
-  
-    public void setMotorVelocity(double velocity) {
-        pidController.setReference(velocity, ControlType.kVelocity);
-    }
-  
-    public void holdMotorPosition() {
-        pidController.setReference(encoder.getPosition(), ControlType.kPosition);
-    }
-  
-    public double getCurrent() {
-        return motor.getOutputCurrent();
+        setShooterMotor(0, ControlType.kDutyCycle);
+        setIndexerMotor(0, ControlType.kDutyCycle);
     }
   
     public double getSmoothCurrent() {
         return smoothCurrent;
+    }
+
+    private void updateTable() {
+        shooterMotorSpeedPublisher.set(shooterMotorSpeed);
+        shooterMotorPositionPublisher.set(shooterMotorPosition);
+        indexerMotorSpeedPublisher.set(indexerMotorSpeed);
+        indexerMotorPositionPublisher.set(indexerMotorPosition);
+    }
+ 
+    public void setShooterMotorPosition(double position) {
+        setShooterMotor(position, ControlType.kPosition);
+    }
+  
+    public void setShooterMotorDutyCycle(double dutyCycle) {
+        setShooterMotor(dutyCycle, ControlType.kDutyCycle);
+    }
+  
+    public void setShooterMotorVelocity(double velocity) {
+        setShooterMotor(velocity, ControlType.kVelocity);
+    }
+  
+    public void holdShooterMotorPosition() {
+        setShooterMotor(shooterEncoder.getPosition(), ControlType.kPosition);
+    }
+  
+    public double getShooterCurrent() {
+        return shooterMotor.getOutputCurrent();
+    }
+
+    private void setShooterMotor(double value, ControlType type) {
+        if (type == ControlType.kDutyCycle || type == ControlType.kVelocity) {
+            shooterMotorSpeed = value;
+        } else if (type == ControlType.kPosition) {
+            shooterMotorPosition = value;
+        }
+        shooterPidController.setReference(value, type);
+    }
+
+    public void setIndexerMotorPosition(double position) {
+        setIndexerMotor(position, ControlType.kPosition);
+    }
+  
+    public void setIndexerMotorDutyCycle(double dutyCycle) {
+        setIndexerMotor(dutyCycle, ControlType.kDutyCycle);
+    }
+  
+    public void setIndexerMotorVelocity(double velocity) {
+        setIndexerMotor(velocity, ControlType.kVelocity);
+    }
+  
+    public void holdIndexerMotorPosition() {
+        setIndexerMotor(shooterEncoder.getPosition(), ControlType.kPosition);
+    }
+  
+    public double getIndexerCurrent() {
+        return indexerMotor.getOutputCurrent();
+    }
+
+    private void setIndexerMotor(double value, ControlType type) {
+        if (type == ControlType.kDutyCycle || type == ControlType.kVelocity) {
+            indexerMotorSpeed = value;
+        } else if (type == ControlType.kPosition) {
+            indexerMotorPosition = value;
+        }
+        indexerPidController.setReference(value, type);
+    }
+
+    private void setPidController(SparkPIDController pidController, double p, double i, double d, double iMaxAccum) {
+        pidController.setP(p);
+        pidController.setI(i);
+        pidController.setD(d);
+        pidController.setIMaxAccum(iMaxAccum, 0);
+    }
+
+    private void setPidController(SparkPIDController pidController, double p, double i, double d, double iMaxAccum, double iZone, double FF, double minOutput, double maxOutput) {
+        setPidController(pidController, p, i, d, iMaxAccum);
+        pidController.setP(iZone);
+        pidController.setI(FF);
+        pidController.setOutputRange(minOutput, maxOutput);
     }
 }
