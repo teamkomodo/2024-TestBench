@@ -22,7 +22,7 @@ import static frc.robot.Constants.OperatorConstants.*;
 
 public class RobotContainer {
   // The robot's subsystems and commands are defined here...
-  private final ExampleSubsystem exampleSubsystem = new ExampleSubsystem(32);
+  // private final ExampleSubsystem exampleSubsystem = new ExampleSubsystem(32);
   private final ShooterSubsystem testMotorSubsystem = new ShooterSubsystem();
 
   // Replace with CommandPS4Controller or CommandJoystick if needed
@@ -40,15 +40,15 @@ public class RobotContainer {
     Trigger bButton = driverController.b();
     Trigger xButton = driverController.x();
     leftTrigger.whileTrue(Commands.runEnd(
-      () -> testMotorSubsystem.setIndexerMotorDutyCycle(driverController.getLeftTriggerAxis() * -0.3), 
+      () -> testMotorSubsystem.setIndexerMotorDutyCycle(driverController.getLeftTriggerAxis() * -0.5), 
       () -> testMotorSubsystem.setIndexerMotorDutyCycle(0)
     ));
     rightTrigger.whileTrue(Commands.runEnd(
-      () -> testMotorSubsystem.setIndexerMotorDutyCycle(driverController.getRightTriggerAxis() * 0.3), 
+      () -> testMotorSubsystem.setIndexerMotorDutyCycle(driverController.getRightTriggerAxis() * 0.5), 
       () -> testMotorSubsystem.setIndexerMotorDutyCycle(0)
     ));
     bButton.onTrue(Commands.runOnce(() -> testMotorSubsystem.setShooterMotorDutyCycle(1)));
-    xButton.onTrue(Commands.runOnce(() -> testMotorSubsystem.setShooterMotorDutyCycle(0)));
+    bButton.onFalse(Commands.runOnce(() -> testMotorSubsystem.setShooterMotorDutyCycle(0)));
     
     /*
     //Right Joystick to control speed

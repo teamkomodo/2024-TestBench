@@ -72,7 +72,7 @@ public class ShooterSubsystem extends SubsystemBase {
         shooterMotor2 = new CANSparkMax(SHOOTER_MOTOR_2_ID, MotorType.kBrushless); // CHANGE DEVICE ID
         shooterMotor2.setSmartCurrentLimit(50);
         shooterMotor2.setInverted(true);
-        shooterMotor2.follow(shooterMotor);
+        shooterMotor2.follow(shooterMotor, true);
         
         shooterPidController = shooterMotor.getPIDController();
         setPidController(shooterPidController, shooterP, shooterI, shooterD, shooterMaxIAccum, shooterIZone, shooterFF, shooterMinOutput, shooterMaxOutput);
@@ -87,7 +87,8 @@ public class ShooterSubsystem extends SubsystemBase {
 
         indexerMotor2 = new CANSparkMax(INDEXER_MOTOR_2_ID, MotorType.kBrushless); // CHANGE DEVICE ID
         indexerMotor2.setInverted(true);
-        indexerMotor2.follow(indexerMotor);
+        indexerMotor2.setSmartCurrentLimit(30);
+        indexerMotor2.follow(indexerMotor, true);
 
         indexerPidController = indexerMotor.getPIDController();
         setPidController(indexerPidController, indexerP, indexerI, indexerD, indexerMaxIAccum);
@@ -121,6 +122,7 @@ public class ShooterSubsystem extends SubsystemBase {
     }
   
     public void setShooterMotorDutyCycle(double dutyCycle) {
+        System.out.println("ran motor");
         setShooterMotor(dutyCycle, ControlType.kDutyCycle);
     }
   
